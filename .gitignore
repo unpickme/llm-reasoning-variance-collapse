@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Data & large results (cache locally, don't commit)
+data/*
+!data/.gitkeep
+results/*.json
+results/*.npy
+!results/.gitkeep
+!results/*.md
+!results/*.png
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
