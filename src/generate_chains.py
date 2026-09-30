@@ -46,6 +46,21 @@ class ChainGenerator:
         self.model = AutoModelForCausalLM.from_pretrained(model_name).to(self.device)
         self.model.eval()
 
+        # Instruction-tuned models ship a chat template; base models (e.g. plain
+        # gpt2) don't. Using the chat template when available is essential —
+        # without it, instruct models won't reliably follow the "end with
+        # Final Answer: X" instruction, and we saw exactly that failure mode
+        # (100% blank extractions) when this was skipped.
+        self.has_chat_template = getattr(self.tokenizer, "chat_template", None) is not None
+
+    def _format_prompt(self, prompt: str) -> str:
+        if self.has_chat_template:
+            messages = [{"role": "user", "content": prompt}]
+            return self.tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+        return prompt
+
     @torch.no_grad()
     def generate_chain(
         self,
@@ -61,7 +76,8 @@ class ChainGenerator:
         but kept modest — the point is to observe naturally-occurring model
         uncertainty, not to inject noise.
         """
-        input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids.to(self.device)
+        formatted_prompt = self._format_prompt(prompt)
+        input_ids = self.tokenizer(formatted_prompt, return_tensors="pt").input_ids.to(self.device)
         generated_ids = input_ids
         record = ChainRecord(prompt=prompt, problem_id=problem_id, generated_text="")
 

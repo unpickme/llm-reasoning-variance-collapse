@@ -23,6 +23,30 @@ to test the hypothesis honestly, report what the data shows (including null or m
 results), and build reusable tooling for others to test it on their own models and
 tasks.
 
+## Methodology: how "variance" is operationalized
+
+"Output-distribution variance" is deliberately underspecified in casual conversation
+about LLM uncertainty, so this project is explicit about which operationalization is
+used at each stage:
+
+- **v0 (current, implemented):** *token-level entropy* — the Shannon entropy of the
+  model's softmax distribution over the vocabulary at each generated token, averaged
+  within each reasoning step. This is the cheapest and most directly comparable
+  signal across models, and is the metric used in the results below. A companion
+  metric, *logit margin* (top-1 vs top-2 probability gap), is also computed per step
+  and available in the data, though not yet the primary reported signal.
+- **Planned v1:** *sampled-continuation variance* — generate k completions from the
+  same partial reasoning chain and measure how much they diverge (e.g. embedding
+  distance between completions), which captures uncertainty the single-sample
+  entropy metric can miss.
+- **Planned v2:** *activation-space variance* — variance in hidden-state
+  representations across steps, which may pick up structural instability that isn't
+  visible at the output-token level at all.
+
+Each reasoning chain's per-step metric is aligned onto a normalized progress axis
+(0 → 1) so that chains of different lengths can be averaged and compared directly —
+see `src/variance_metrics.py::align_trajectory`.
+
 ## Method (v0)
 
 1. Run a small open-source LLM on a reasoning benchmark (GSM8K, arithmetic subset),
@@ -65,6 +89,8 @@ llm-reasoning-variance-collapse/
 
 🚧 Early stage — hypothesis under active testing. Results, positive or negative,
 will be posted here as they come in rather than only if they confirm the hypothesis.
+See `results/exp1_summary.md` for the current findings writeup and
+`results/exp1_trajectories.png` for the latest trajectory plot.
 
 ## Running it
 

@@ -52,7 +52,7 @@ def load_gsm8k_subset(n_samples: int):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="gpt2")
+    parser.add_argument("--model", default="Qwen/Qwen2.5-0.5B-Instruct")
     parser.add_argument("--n-samples", type=int, default=200)
     parser.add_argument("--dataset", default="gsm8k")
     parser.add_argument("--n-grid-points", type=int, default=20)
