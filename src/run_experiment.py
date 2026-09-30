@@ -41,7 +41,7 @@ def load_gsm8k_subset(n_samples: int):
     """
     from datasets import load_dataset
 
-    ds = load_dataset("gsm8k", "main", split="test")
+    ds = load_dataset("openai/gsm8k", "main", split="test")
     ds = ds.select(range(min(n_samples, len(ds))))
     examples = []
     for i, row in enumerate(ds):
