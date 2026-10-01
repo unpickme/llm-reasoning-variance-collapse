@@ -83,8 +83,23 @@ class ChainGenerator:
 
         eos_id = self.tokenizer.eos_token_id
 
+        # KV-cache: feed the full prompt once, then on every subsequent step
+        # feed ONLY the single new token and reuse cached key/value states for
+        # everything before it. Without this, each step recomputes attention
+        # over the entire growing sequence from scratch — O(n^2) total work
+        # and the main reason early runs of this script took hours instead of
+        # minutes. current_input starts as the full prompt, then collapses to
+        # one token per step once past_key_values exists.
+        current_input = input_ids
+        past_key_values = None
+
         for _ in range(max_new_tokens):
-            outputs = self.model(generated_ids)
+            outputs = self.model(
+                current_input,
+                past_key_values=past_key_values,
+                use_cache=True,
+            )
+            past_key_values = outputs.past_key_values
             next_token_logits = outputs.logits[0, -1, :] / max(temperature, 1e-5)
 
             # top-p filtering for sampling, but we record the FULL distribution
@@ -104,6 +119,7 @@ class ChainGenerator:
             )
 
             generated_ids = torch.cat([generated_ids, next_token.unsqueeze(0)], dim=-1)
+            current_input = next_token.unsqueeze(0)  # just the new token next time
 
             if token_id == eos_id:
                 break

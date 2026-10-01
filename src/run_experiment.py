@@ -24,14 +24,30 @@ RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 COT_PROMPT_TEMPLATE = (
-    "Solve the following problem step by step, showing your reasoning, "
-    "and end with 'Final Answer: <number>'.\n\nProblem: {question}\n\nSolution:"
+    "Solve the following problem step by step. Keep your reasoning brief and in "
+    "plain text — no LaTeX, no markdown formatting, no section headers. "
+    "End your solution with a new line that says exactly: 'Final Answer: <number>'.\n\n"
+    "Problem: {question}\n\nSolution:"
 )
 
 
 def extract_final_answer(text: str) -> str:
-    match = re.search(r"Final Answer:\s*([\-0-9\.,]+)", text)
-    return match.group(1).strip().rstrip(".") if match else ""
+    match = re.search(r"Final Answer:?\**\s*\$?([\-0-9][\d,\.]*)", text, re.IGNORECASE)
+    if match:
+        return match.group(1).strip().rstrip(".").replace(",", "")
+
+    # Fallback: small instruction-tuned models don't always comply with an
+    # exact output format, even when explicitly told to (a known limitation,
+    # not a bug in this pipeline). If the literal phrase isn't found, fall
+    # back to the last standalone number mentioned anywhere in the text —
+    # in a concluding sentence like "Janet makes $46 every day", that's
+    # almost always the stated answer. This is a heuristic, not a guarantee;
+    # noted as a limitation in results/exp1_summary.md.
+    numbers = re.findall(r"\$?(-?\d[\d,]*\.?\d*)", text)
+    if numbers:
+        return numbers[-1].strip().rstrip(".").replace(",", "")
+
+    return ""
 
 
 def load_gsm8k_subset(n_samples: int):
@@ -45,7 +61,7 @@ def load_gsm8k_subset(n_samples: int):
     ds = ds.select(range(min(n_samples, len(ds))))
     examples = []
     for i, row in enumerate(ds):
-        gold = row["answer"].split("####")[-1].strip()
+        gold = row["answer"].split("####")[-1].strip().replace(",", "")
         examples.append({"id": str(i), "question": row["question"], "gold_answer": gold})
     return examples
 
@@ -56,6 +72,7 @@ def main():
     parser.add_argument("--n-samples", type=int, default=200)
     parser.add_argument("--dataset", default="gsm8k")
     parser.add_argument("--n-grid-points", type=int, default=20)
+    parser.add_argument("--max-new-tokens", type=int, default=400)
     args = parser.parse_args()
 
     RESULTS_DIR.mkdir(exist_ok=True)
@@ -70,12 +87,14 @@ def main():
     correct_features, incorrect_features = [], []
     all_chains_summary = []
 
-    for ex in examples:
+    for i, ex in enumerate(examples):
+        print(f"Problem {i + 1}/{len(examples)} (id={ex['id']})...", flush=True)
         prompt = COT_PROMPT_TEMPLATE.format(question=ex["question"])
-        chain = generator.generate_chain(prompt, problem_id=ex["id"])
+        chain = generator.generate_chain(prompt, problem_id=ex["id"], max_new_tokens=args.max_new_tokens)
 
         chain.final_answer = extract_final_answer(chain.generated_text)
         chain.is_correct = chain.final_answer == ex["gold_answer"]
+        print(f"  -> answer={chain.final_answer!r} gold={ex['gold_answer']!r} correct={chain.is_correct}", flush=True)
 
         token_strs = [s.token_str for s in chain.steps]
         step_groups = split_tokens_into_steps(token_strs)
@@ -96,6 +115,7 @@ def main():
             "is_correct": chain.is_correct,
             "final_answer": chain.final_answer,
             "gold_answer": ex["gold_answer"],
+            "generated_text": chain.generated_text,
             "trajectory": trajectory.tolist(),
         })
 
