@@ -11,6 +11,7 @@ Usage:
 
 import argparse
 import json
+import math
 import re
 from pathlib import Path
 
@@ -48,6 +49,27 @@ def extract_final_answer(text: str) -> str:
         return numbers[-1].strip().rstrip(".").replace(",", "")
 
     return ""
+
+
+def answers_match(predicted: str, gold: str) -> bool:
+    """Compare a predicted answer to the gold answer.
+
+    Bug fix: the original code compared these as raw strings, so numerically
+    correct answers like "26.00" or "26.0" were marked wrong against a gold
+    answer of "26". Here we parse both sides as floats and compare
+    numerically when possible, falling back to exact string equality only
+    if either side can't be parsed as a number (e.g. extraction failed and
+    predicted == "").
+    """
+    if predicted == gold:
+        return True
+    try:
+        return math.isclose(
+            float(predicted.replace(",", "")), float(gold.replace(",", "")),
+            rel_tol=1e-9, abs_tol=1e-9,
+        )
+    except (ValueError, TypeError, AttributeError):
+        return False
 
 
 def load_gsm8k_subset(n_samples: int):
@@ -93,7 +115,7 @@ def main():
         chain = generator.generate_chain(prompt, problem_id=ex["id"], max_new_tokens=args.max_new_tokens)
 
         chain.final_answer = extract_final_answer(chain.generated_text)
-        chain.is_correct = chain.final_answer == ex["gold_answer"]
+        chain.is_correct = answers_match(chain.final_answer, ex["gold_answer"])
         print(f"  -> answer={chain.final_answer!r} gold={ex['gold_answer']!r} correct={chain.is_correct}", flush=True)
 
         token_strs = [s.token_str for s in chain.steps]
