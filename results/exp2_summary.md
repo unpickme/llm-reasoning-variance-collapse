@@ -11,6 +11,12 @@
 
 ## Results
 
+**Update (3 October 2026):** The answer-matching bug described below has been
+fixed in `run_experiment2.py` (and `run_experiment.py`) — correctness is now
+checked by parsing both the extracted and gold answers as floats and comparing
+numerically, rather than via exact string equality. Experiment 2 is being
+re-run (n=50) with the fix in place; the results below predate that fix and
+should be treated as provisional until the re-run completes.
 - Correct chains: 18
 - Incorrect chains: 32
 - Peak location — correct vs incorrect: rank-biserial effect = -0.210, p = 0.083,
