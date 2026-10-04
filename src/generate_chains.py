@@ -128,6 +128,46 @@ class ChainGenerator:
         record.generated_text = self.tokenizer.decode(new_tokens, skip_special_tokens=True)
         return record
 
+    @torch.no_grad()
+    def generate_text_continuation(
+        self,
+        prefix_ids: torch.Tensor,
+        max_new_tokens: int = 20,
+        temperature: float = 0.7,
+        top_p: float = 0.95,
+    ) -> str:
+        """
+        Generate a short continuation from an ARBITRARY existing token prefix
+        (not a fresh prompt). Used by Experiment 2 to branch several
+        independent samples from the same checkpoint partway through a
+        reasoning chain. Lighter than generate_chain(): doesn't record
+        per-token distributions, since here we only need the resulting text
+        to measure how much independent continuations diverge from each
+        other, not per-token entropy.
+        """
+        eos_id = self.tokenizer.eos_token_id
+        current_input = prefix_ids
+        past_key_values = None
+        generated_tokens = []
+
+        for _ in range(max_new_tokens):
+            outputs = self.model(current_input, past_key_values=past_key_values, use_cache=True)
+            past_key_values = outputs.past_key_values
+            next_token_logits = outputs.logits[0, -1, :] / max(temperature, 1e-5)
+
+            filtered_logits = self._top_p_filter(next_token_logits, top_p)
+            sample_probs = F.softmax(filtered_logits, dim=-1)
+            next_token = torch.multinomial(sample_probs, num_samples=1)
+
+            token_id = next_token.item()
+            generated_tokens.append(token_id)
+            current_input = next_token.unsqueeze(0)
+
+            if token_id == eos_id:
+                break
+
+        return self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
+
     @staticmethod
     def _top_p_filter(logits: torch.Tensor, top_p: float) -> torch.Tensor:
         sorted_logits, sorted_indices = torch.sort(logits, descending=True)
