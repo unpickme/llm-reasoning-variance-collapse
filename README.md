@@ -65,6 +65,16 @@ see `src/variance_metrics.py::align_trajectory`.
 See `experiments/exp1_variance_trajectories.md` for the full experimental design and
 `src/` for the implementation.
 
+**Experiment 1 result (n=50, token entropy):** null result — no evidence this
+signature exists in mean per-step token entropy at this scale. See
+`results/exp1_summary.md` for full details and the label-shuffle control that
+backs this up.
+
+**Experiment 2 (in progress):** tests an alternative operationalization —
+divergence between independently-sampled continuations branched from fixed
+checkpoints along each chain, rather than single-sample token entropy. See
+`experiments/exp2_sampled_continuation_variance.md`.
+
 ## Repository structure
 
 ```
@@ -73,14 +83,20 @@ llm-reasoning-variance-collapse/
 ├── LICENSE
 ├── requirements.txt
 ├── src/
-│   ├── generate_chains.py     # generate reasoning chains + capture token distributions
-│   ├── variance_metrics.py    # entropy / logit-margin / trajectory alignment
-│   ├── detect_signature.py    # peak/collapse detection + statistical tests
-│   └── run_experiment.py      # orchestrates end-to-end run
+│   ├── generate_chains.py        # generate reasoning chains + capture token distributions
+│   ├── variance_metrics.py       # entropy / logit-margin / trajectory alignment
+│   ├── continuation_divergence.py # exp2: divergence between sampled continuations
+│   ├── detect_signature.py       # peak/collapse detection + statistical tests
+│   ├── run_experiment.py         # exp1 orchestration
+│   ├── run_experiment2.py        # exp2 orchestration
+│   ├── plot_results.py           # exp1 plotting
+│   └── plot_results2.py          # exp2 plotting
 ├── experiments/
-│   └── exp1_variance_trajectories.md
+│   ├── exp1_variance_trajectories.md
+│   └── exp2_sampled_continuation_variance.md
 ├── tests/
-│   └── test_variance_metrics.py
+│   ├── test_variance_metrics.py
+│   └── test_continuation_divergence.py
 ├── data/          # cached datasets / generated chains (gitignored, see below)
 └── results/       # plots, tables, run logs (gitignored except summaries)
 ```
@@ -96,7 +112,20 @@ See `results/exp1_summary.md` for the current findings writeup and
 
 ```bash
 pip install -r requirements.txt
-python src/run_experiment.py --model gpt2 --n-samples 200 --dataset gsm8k
+**Status:** Both experiments conducted so far are null results.
+
+- **Experiment 1** (token entropy, n=50): peak-location and post-peak-slope
+  effects sit at ~50th percentile of the shuffle-null distribution — no signal.
+- **Experiment 2** (sampled-continuation divergence, n=50): an apparent
+  post-peak-slope signal (p=0.0078, 99th percentile) was traced to an
+  answer-matching bug contaminating the correct/incorrect split. After fixing
+  the bug and re-running, the effect disappeared (p=0.49, 38.7th percentile).
+  See `results/exp2_summary.md` for the full before/after comparison.
+
+The hypothesis — that output-distribution variance shows an early-peak-then-
+collapse signature predicting reasoning failure — is not supported by either
+experiment conducted so far. Next directions are logged in
+`results/exp2_summary.md`.python src/run_experiment.py --model gpt2 --n-samples 200 --dataset gsm8k
 ```
 
 See `experiments/exp1_variance_trajectories.md` for parameters and expected runtime.

@@ -25,6 +25,29 @@ should be treated as provisional until the re-run completes.
   **null-percentile = 99.0%** (clears the 95% bar)
 
 See `results/exp2_trajectories.png` for the mean trajectory plot.
+**Update (3 October 2026):** The answer-matching bug described above has been
+fixed — correctness is now checked by parsing both the extracted and gold
+answers as floats and comparing numerically, rather than via exact string
+equality (`run_experiment.py` and `run_experiment2.py`). Experiment 2 was
+re-run in full (n=50) with the fix in place.
+
+**Result: the apparent signal did not survive the fix.**
+
+| Metric | Before fix (buggy split) | After fix (correct split) |
+|---|---|---|
+| Post-peak slope | p=0.0078, 99th percentile of shuffle-null | p=0.492, 38.7th percentile of shuffle-null |
+| Peak location | p=0.083, 89.2nd percentile of shuffle-null | p=0.651, 36.5th percentile of shuffle-null |
+
+With the correctness labels fixed (18 correct / 32 incorrect, vs. a different
+split under the bug), both metrics now sit comfortably within the shuffle-null
+distribution. The original post-peak-slope result was an artifact of the
+contaminated correct/incorrect split, not a real effect. **Experiment 2 is
+now a clean null, consistent with Experiment 1.**
+
+This is being recorded as a null result rather than reframed or minimized:
+the bug produced a false-positive-looking signal, and fixing it made that
+signal disappear. See "Next steps" below for where the investigation goes
+from here (semantic-embedding divergence, larger model scale).
 
 ## Interpretation
 
