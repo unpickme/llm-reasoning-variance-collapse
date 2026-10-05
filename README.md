@@ -103,10 +103,25 @@ llm-reasoning-variance-collapse/
 
 ## Status
 
-🚧 Early stage — hypothesis under active testing. Results, positive or negative,
-will be posted here as they come in rather than only if they confirm the hypothesis.
-See `results/exp1_summary.md` for the current findings writeup and
-`results/exp1_trajectories.png` for the latest trajectory plot.
+Three experiments conducted so far, all null results.
+
+- **Experiment 1** (token entropy, n=50): peak-location and post-peak-slope
+  effects sit at ~50th percentile of the shuffle-null distribution — no signal.
+- **Experiment 2** (sampled-continuation Jaccard divergence, n=50): an
+  apparent post-peak-slope signal (p=0.0078, 99th percentile) was traced to
+  an answer-matching bug contaminating the correct/incorrect split. After
+  fixing the bug and re-running, the effect disappeared (p=0.49, 38.7th
+  percentile). See `results/exp2_summary.md`.
+- **Experiment 3** (sampled-continuation semantic-embedding divergence,
+  n=50): replacing Jaccard with sentence-embedding cosine distance, to rule
+  out lexical-wording noise as a confound, still finds no signal (p=0.61 and
+  p=0.70). See `results/exp3_summary.md`.
+
+The hypothesis — that output-distribution variance shows an early-peak-then-
+collapse signature predicting reasoning failure — is not supported across
+three independent operationalizations (token entropy, lexical continuation
+divergence, semantic continuation divergence) on this model/dataset/scale.
+Next directions are logged in `results/exp3_summary.md`.
 
 ## Running it
 
