@@ -138,3 +138,7 @@ than an application of any prior unpublished framework.
 ## License
 
 MIT — see `LICENSE`.
+
+## Related work
+
+Companion study testing the same hypothesis in RL training dynamics: [rl-policy-entropy-collapse](https://github.com/unpickme/rl-policy-entropy-collapse).
